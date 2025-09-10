@@ -1,32 +1,38 @@
 import express from "express";
 import cloudinary from "../lib/cloudinary.js";
-import Book from "../models/Book.js";
+import Book from "../model/Book.js";
 import protectRoute from "../middleware/auth.middleware.js";
+import multer from "multer";
 
 const router = express.Router();
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-router.post("/", protectRoute, async (req, res) => {
+router.post("/", protectRoute, upload.single("image"), async (req, res) => {
   try {
-    const { title, caption, rating, image } = req.body;
+    const { title, caption, rating } = req.body;
 
-    if (!image || !title || !caption || !rating) {
+    if (!req.file || !title || !caption || !rating) {
       return res.status(400).json({ message: "Please provide all fields" });
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(image);
-    const imageUrl = uploadResponse.secure_url;
+    // Upload to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload_stream(
+      { resource_type: "image" },
+      (error, result) => {
+        if (error) throw error;
+        const newBook = new Book({
+          title,
+          caption,
+          rating,
+          image: result.secure_url,
+          user: req.user._id,
+        });
+        newBook.save().then((book) => res.status(201).json(book));
+      }
+    );
 
-    const newBook = new Book({
-      title,
-      caption,
-      rating,
-      image: imageUrl,
-      user: req.user._id,
-    });
-
-    await newBook.save();
-
-    res.status(201).json(newBook);
+    uploadResponse.end(req.file.buffer);
   } catch (error) {
     console.log("Error creating book", error);
     res.status(500).json({ message: error.message });

@@ -17,7 +17,6 @@ const bookSchema = new mongoose.Schema(
       max: 5,
     },
     image: {
-      // ✅ Add the missing image field
       type: String,
       required: true,
     },
