@@ -19,7 +19,7 @@ logs
 Thumbs.db
 
 # Build output
-dist/
+dist/ 
 build/
 
 # Temporary files
